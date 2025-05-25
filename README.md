@@ -15,3 +15,9 @@ ansible/files/configs/.pgpass
 ansible/files/configs/postgresql.conf
 ansible/configure_replica_playbook.yml (в переменной master_host)
 ```
+#### 3. Порядок запуска плейбуков
+```
+ansible/install_docker_playbook.yml
+ansible/run_application_playbook.yml
+ansible/configure_replica_playbook.yml
+```
