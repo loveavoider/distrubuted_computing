@@ -73,8 +73,8 @@
         path: "{{ venv_path }}/bin/pip"
       register: pip_exists
 
-    - name: "Install pip (сделал через команду потому что через pip не вышло, добавил проверку для иммутаиммутабельности)"
-      ansible.builtin.command: "/opt/myvenv/bin/python -m ensurepip --upgrade"
+    - name: "Install pip"
+      ansible.builtin.command: "{{ venv_path }}/bin/python -m ensurepip --upgrade"
       when: not pip_exists.stat.exists
 
     - name: Install packages in virtualenv

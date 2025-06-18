@@ -1,9 +1,5 @@
 version: '3'
 
-volumes:
-  pg-slave-data:
-    driver: local
-
 services:
   postgres-slave:
     container_name: slave
@@ -14,7 +10,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
     volumes:
-      - pg-slave-data:/var/lib/postgresql/data
+      - /var/www/pg-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     command: >

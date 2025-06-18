@@ -5,7 +5,7 @@
   gather_facts: yes
   vars:
     application_path: "/var/www"
-    master_host: "158.160.158.175"
+    master_host: "192.168.1.71"
 
   tasks:
     - name: Create Docker Compose directory
@@ -24,6 +24,12 @@
       copy:
         src: ./files/configs/.pgpass
         dest: "{{ application_path }}/.pgpass"
+        mode: "0600"
+
+    - name: Copy postgresql.auto.conf
+      copy:
+        src: ./files/configs/postgresql.auto.conf
+        dest: "{{ application_path }}/postgresql.auto.conf"
         mode: "0644"
 
     - name: Copy env
@@ -43,37 +49,26 @@
         path: /var/www/.pgpass
         container_path: /var/lib/postgresql/.pgpass
 
-    - name: Chmod pgpass
-      community.docker.docker_container_exec:
-        user: "postgres"
-        container: slave
-        command: "chmod 600 /var/lib/postgresql/.pgpass"
+    - name: Chmod && Chown postgresql/data
+      ansible.builtin.file:
+        path: /var/www/pg-data
+        state: directory
+        owner: "999"
+        group: "999"
+        mode: '0750'
+        recurse: yes
 
     - name: Make backup
       community.docker.docker_container_exec:
         user: "postgres"
         container: slave
-        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -C -S pg_replica_slot1"
+        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -C -S pg_slot_repl"
 
-    - name: Configure postgresql.auto.conf
-      community.docker.docker_container_exec:
+    - name: Copy a postgresql.auto.conf into the container
+      community.docker.docker_container_copy_into:
         container: slave
-        command: "echo primary_conninfo = 'host=158.160.158.175 port=5432 user=repl_user password=secret'primary_conninfo = 'host=158.160.158.175 port=5432 user=repl_user password=secret' >> /var/lib/postgresql/data/postgresql.auto.conf"
-
-    - name: Configure postgresql.auto.conf
-      community.docker.docker_container_exec:
-        container: slave
-        command: "echo primary_slot_name = 'pg_replica_slot' >> /var/lib/postgresql/data/postgresql.auto.conf"
-    
-    - name: Chown postgresql/data
-      community.docker.docker_container_exec:
-        container: slave
-        command: "chown postgres:postgres -R /var/lib/postgresql/data/"
-    
-    - name: Chmod postgresql/data
-      community.docker.docker_container_exec:
-        container: slave
-        command: "chmod -R 750 /var/lib/postgresql/data/"
+        path: /var/www/postgresql.auto.conf
+        container_path: /var/lib/postgresql/data/postgresql.auto.conf
     
     - name: Start pg
       community.docker.docker_container_exec:
