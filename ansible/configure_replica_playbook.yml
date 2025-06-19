@@ -5,7 +5,7 @@
   gather_facts: yes
   vars:
     application_path: "/var/www"
-    master_host: "192.168.1.71"
+    master_host: "{{ hostvars['backend']['ansible_host'] }}"
 
   tasks:
     - name: Create Docker Compose directory
@@ -22,13 +22,16 @@
     
     - name: Copy .pgpass
       copy:
-        src: ./files/configs/.pgpass
+        content: |
+          {{ master_host }}:5432:*:repl_user:secret
         dest: "{{ application_path }}/.pgpass"
         mode: "0600"
 
     - name: Copy postgresql.auto.conf
       copy:
-        src: ./files/configs/postgresql.auto.conf
+        content: |
+          primary_conninfo = 'host={{ master_host }} port=5432 user=repl_user password=secret'
+          primary_slot_name = 'pg_slot_repl'
         dest: "{{ application_path }}/postgresql.auto.conf"
         mode: "0644"
 
@@ -37,6 +40,11 @@
         src: ./files/.env
         dest: "{{ application_path }}/.env"
         mode: "0644"
+    
+    # - name: Remove old data directory
+    #   file:
+    #     path: "{{ application_path }}/pg-data"
+    #     state: absent
 
     - name: Up containers
       community.docker.docker_compose_v2:
@@ -62,7 +70,7 @@
       community.docker.docker_container_exec:
         user: "postgres"
         container: slave
-        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -C -S pg_slot_repl"
+        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -C -S pg_slot_repl3"
 
     - name: Copy a postgresql.auto.conf into the container
       community.docker.docker_container_copy_into:

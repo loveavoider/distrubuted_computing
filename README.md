@@ -8,12 +8,9 @@
 ```bash
 cp ansible/files/_env.example ansible/files/.env
 ```
-#### 2. Поменять хосты в файлах
+#### 2. Поменять хосты в файле
 ```
 ansible/hosts
-ansible/files/configs/.pgpass
-ansible/files/configs/postgresql.conf
-ansible/configure_replica_playbook.yml (в переменной master_host)
 ```
 #### 3. Порядок запуска плейбуков
 ```

@@ -1,0 +1,7 @@
+---
+- name: Configure PostgreSQL
+  hosts: slave
+  tasks:
+    - name: Show all hosts in inventory
+      debug:
+        msg: "Current host: {{ hostvars['backend']['ansible_host'] }}"

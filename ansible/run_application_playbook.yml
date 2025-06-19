@@ -59,23 +59,17 @@
       become: true
       ansible.builtin.apt:
         name:
+          - python3-pip
           - python3-venv
         state: present
         update_cache: yes
 
-    - name: Create virtual environment
-      ansible.builtin.command:
-        cmd: "/usr/bin/python3.12 -m venv {{ venv_path }}"
-        creates: "{{ venv_path }}"
-    
-    - name: "Check pip"
-      ansible.builtin.stat:
-        path: "{{ venv_path }}/bin/pip"
-      register: pip_exists
-
-    - name: "Install pip"
-      ansible.builtin.command: "{{ venv_path }}/bin/python -m ensurepip --upgrade"
-      when: not pip_exists.stat.exists
+    - name: Создание виртуального окружения
+      ansible.builtin.pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ venv_path }}"
+        virtualenv_command: "python3 -m venv"
 
     - name: Install packages in virtualenv
       ansible.builtin.pip:
