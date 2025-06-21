@@ -16,16 +16,31 @@
         driver: bridge
         state: present
 
-    - name: Up exporter container
+    - name: Up exporter container for master
       community.docker.docker_container:
-        name: exporter
+        name: exporter-master
         image: "quay.io/prometheuscommunity/postgres-exporter"
         networks:
           - name: "{{ monitoring_network }}"
             aliases:
-              - exporter
+              - exporter-master
         env:
-          DATA_SOURCE_NAME: "postgresql://postgres:secret@{{ master_host }}:5432/kittygram?sslmode=disable,postgresql://postgres:secret@{{ replica_host }}:5432/kittygram?sslmode=disable"
+          DATA_SOURCE_URI: "{{ master_host }}:5432/kittygram?sslmode=disable"
+          DATA_SOURCE_USER: "postgres"
+          DATA_SOURCE_PASS: "secret"
+
+    - name: Up exporter container for slave
+      community.docker.docker_container:
+        name: exporter-slave
+        image: "quay.io/prometheuscommunity/postgres-exporter"
+        networks:
+          - name: "{{ monitoring_network }}"
+            aliases:
+              - exporter-slave
+        env:
+          DATA_SOURCE_URI: "{{ replica_host }}:5432/kittygram?sslmode=disable"
+          DATA_SOURCE_USER: "postgres"
+          DATA_SOURCE_PASS: "secret"
 
     - name: Copy prometheus.yml
       copy:
@@ -45,3 +60,20 @@
           - "{{ application_path }}/prometheus.yml:/etc/prometheus/prometheus.yml"
         ports:
           - "9090:9090"
+
+    - name: Create volume for grafana
+      community.docker.docker_volume:
+        name: grafana-storage
+
+    - name: Up grafana
+      community.docker.docker_container:
+        name: grafana
+        image: "grafana/grafana-enterprise"
+        networks:
+          - name: "{{ monitoring_network }}"
+            aliases:
+              - grafana
+        volumes:
+          - "grafana-storage:/var/lib/grafana"
+        ports:
+          - "3000:3000"
