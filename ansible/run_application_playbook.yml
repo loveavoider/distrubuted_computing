@@ -8,6 +8,10 @@
     venv_path: "/opt/myvenv"
 
   tasks:
+    - name: "Set ansible_python_interpreter"
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: "{{ venv_path }}/bin/python"
+
     - name: Create Docker Compose directory
       file:
         path: "{{ application_path }}"
@@ -48,40 +52,22 @@
         container: postgres
         path: /var/www/pg_hba.conf
         container_path: /var/lib/postgresql/data/pg_hba.conf
+        owner_id: "999"
+        group_id: "999"
     
     - name: Copy a postgresql.conf into the container
       community.docker.docker_container_copy_into:
         container: postgres
         path: /var/www/postgresql.conf
         container_path: /var/lib/postgresql/data/postgresql.conf
-    
-    - name: Install required system packages
-      become: true
-      ansible.builtin.apt:
-        name:
-          - python3-pip
-          - python3-venv
-        state: present
-        update_cache: yes
+        owner_id: "999"
+        group_id: "999"
 
-    - name: Создание виртуального окружения
-      ansible.builtin.pip:
-        name: pip
-        state: latest
-        virtualenv: "{{ venv_path }}"
-        virtualenv_command: "python3 -m venv"
-
-    - name: Install packages in virtualenv
-      ansible.builtin.pip:
-        name: 
-          - "psycopg2-binary"
-          - "requests"
-        virtualenv: "{{ venv_path }}"
-        state: present
-
-    - name: "Set ansible_python_interpreter"
-      ansible.builtin.set_fact:
-        ansible_python_interpreter: "{{ venv_path }}/bin/python"
+    - name: Make migration
+      community.docker.docker_container_exec:
+        container: backend
+        command: "python3 manage.py migrate"
+        detach: false
 
     - name: "Выполнить запрос к pg_roles"
       community.postgresql.postgresql_query:
@@ -109,9 +95,3 @@
         name: postgres
         state: started
         restart: yes
-
-    - name: Make migration
-      community.docker.docker_container_exec:
-        container: backend
-        command: "python3 manage.py migrate"
-        detach: false

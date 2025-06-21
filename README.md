@@ -15,6 +15,7 @@ ansible/hosts
 #### 3. Порядок запуска плейбуков
 ```
 ansible/install_docker_playbook.yml
+ansible/install_dependencies_playbook.yml
 ansible/run_application_playbook.yml
 ansible/configure_replica_playbook.yml
 ```

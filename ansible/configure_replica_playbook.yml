@@ -6,8 +6,14 @@
   vars:
     application_path: "/var/www"
     master_host: "{{ hostvars['backend']['ansible_host'] }}"
+    slot_name: "pg_slot_repl"
+    venv_path: "/opt/myvenv"
 
   tasks:
+    - name: "Set ansible_python_interpreter"
+      ansible.builtin.set_fact:
+        ansible_python_interpreter: "{{ venv_path }}/bin/python"
+
     - name: Create Docker Compose directory
       file:
         path: "{{ application_path }}"
@@ -40,11 +46,18 @@
         src: ./files/.env
         dest: "{{ application_path }}/.env"
         mode: "0644"
-    
-    # - name: Remove old data directory
-    #   file:
-    #     path: "{{ application_path }}/pg-data"
-    #     state: absent
+
+    - name: Remove container
+      community.docker.docker_container:
+        name: slave
+        state: absent
+        force_kill: true
+        volumes: true
+
+    - name: Remove old data directory
+      file:
+        path: "{{ application_path }}/pg-data"
+        state: absent
 
     - name: Up containers
       community.docker.docker_compose_v2:
@@ -66,11 +79,19 @@
         mode: '0750'
         recurse: yes
 
+    - name: Create replication slot
+      community.postgresql.postgresql_slot:
+        slot_name: "{{ slot_name }}"
+        login_db: kittygram
+        login_host: "{{ master_host }}"
+        login_user: "repl_user"
+        login_password: "secret"
+
     - name: Make backup
       community.docker.docker_container_exec:
         user: "postgres"
         container: slave
-        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -C -S pg_slot_repl3"
+        command: "pg_basebackup -h {{ master_host }} -U repl_user -D /var/lib/postgresql/data -R -X stream -w -S {{ slot_name }}"
 
     - name: Copy a postgresql.auto.conf into the container
       community.docker.docker_container_copy_into:
