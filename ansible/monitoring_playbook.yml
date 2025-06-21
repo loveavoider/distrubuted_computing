@@ -1,0 +1,47 @@
+---
+- name: Monitoring
+  hosts: slave
+  become: yes
+  gather_facts: yes
+  vars:
+    master_host: "{{ hostvars['backend']['ansible_host'] }}"
+    replica_host: "{{ hostvars['replica']['ansible_host'] }}"
+    monitoring_network: "monitoring"
+    application_path: "/var/www"
+
+  tasks:
+    - name: Create network
+      community.docker.docker_network:
+        name: "{{ monitoring_network }}"
+        driver: bridge
+        state: present
+
+    - name: Up exporter container
+      community.docker.docker_container:
+        name: exporter
+        image: "quay.io/prometheuscommunity/postgres-exporter"
+        networks:
+          - name: "{{ monitoring_network }}"
+            aliases:
+              - exporter
+        env:
+          DATA_SOURCE_NAME: "postgresql://postgres:secret@{{ master_host }}:5432/kittygram?sslmode=disable,postgresql://postgres:secret@{{ replica_host }}:5432/kittygram?sslmode=disable"
+
+    - name: Copy prometheus.yml
+      copy:
+        src: ./files/configs/prometheus.yml
+        dest: "{{ application_path }}/prometheus.yml"
+        mode: "0644"
+
+    - name: Up prometheus
+      community.docker.docker_container:
+        name: prometheus
+        image: "prom/prometheus"
+        networks:
+          - name: "{{ monitoring_network }}"
+            aliases:
+              - prometheus
+        volumes:
+          - "{{ application_path }}/prometheus.yml:/etc/prometheus/prometheus.yml"
+        ports:
+          - "9090:9090"

@@ -45,6 +45,8 @@ services:
     image: jene4kabezdar/kittygram_gateway:latest
     ports:
       - "80:80"
+    depends_on:
+      - backend
     volumes:
       - media:/media
       - static:/static
