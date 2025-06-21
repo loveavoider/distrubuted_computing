@@ -63,6 +63,12 @@
         owner_id: "999"
         group_id: "999"
 
+    - name: Re-start postgres
+      community.docker.docker_container:
+        name: postgres
+        state: started
+        restart: yes
+
     - name: Make migration
       community.docker.docker_container_exec:
         container: backend
@@ -89,9 +95,3 @@
         login_password: "secret"
         query: "CREATE ROLE repl_user WITH REPLICATION LOGIN PASSWORD 'secret';"
       when: not pg_role_check.query_result[0].role_exists
-    
-    - name: Re-start postgres
-      community.docker.docker_container:
-        name: postgres
-        state: started
-        restart: yes
