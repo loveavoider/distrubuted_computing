@@ -69,6 +69,13 @@
         state: started
         restart: yes
 
+    - name: Wait for PostgreSQL to start
+      ansible.builtin.wait_for:
+        port: 5432
+        host: "localhost"
+        delay: 5
+        timeout: 60
+
     - name: Make migration
       community.docker.docker_container_exec:
         container: backend
