@@ -8,6 +8,7 @@
     replica_host: "{{ hostvars['replica']['ansible_host'] }}"
     monitoring_network: "monitoring"
     application_path: "/var/www"
+    grafana_url: "http://localhost:3000"
 
   tasks:
     - name: Create network
@@ -77,3 +78,38 @@
           - "grafana-storage:/var/lib/grafana"
         ports:
           - "3000:3000"
+
+    - name: Wait for Prometheus to start
+      ansible.builtin.wait_for:
+        port: 9090
+        host: "localhost"
+        delay: 10
+        timeout: 60
+
+    - name: Wait for Grafana to start
+      ansible.builtin.wait_for:
+        port: 3000
+        host: "localhost"
+        delay: 10
+        timeout: 60
+
+    - name: create prometheus datasource
+      community.grafana.grafana_datasource:
+        name: prometheus
+        ds_type: prometheus
+        url: "{{ grafana_url }}"
+        ds_url: "http://prometheus:9090"
+        access: proxy
+        tls_skip_verify: true
+        uid: "pg-prometheus"
+
+    - name: Copy dashboard
+      copy:
+        src: ./files/configs/db_dash.json
+        dest: "/var/www/db_dash.json"
+        mode: "0644"
+
+    - name: Export dashboard
+      community.grafana.grafana_dashboard:
+        url: "{{ grafana_url }}"
+        path: "/var/www/db_dash.json"
