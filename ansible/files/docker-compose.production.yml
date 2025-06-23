@@ -52,5 +52,3 @@ services:
       - static:/static
     networks:
       - app
-    depends_on:
-      - backend
