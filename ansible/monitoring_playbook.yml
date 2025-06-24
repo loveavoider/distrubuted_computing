@@ -79,19 +79,15 @@
         ports:
           - "3000:3000"
 
-    - name: Wait for Prometheus to start
-      ansible.builtin.wait_for:
-        port: 9090
-        host: "localhost"
-        delay: 10
-        timeout: 60
-
-    - name: Wait for Grafana to start
-      ansible.builtin.wait_for:
-        port: 3000
-        host: "localhost"
-        delay: 10
-        timeout: 60
+    - name: Wait for Grafana to be ready
+      uri:
+        url: "http://localhost:3000/api/health"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 10
+      delay: 5
 
     - name: create prometheus datasource
       community.grafana.grafana_datasource:
